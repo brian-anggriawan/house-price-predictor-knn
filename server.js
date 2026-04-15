@@ -8,16 +8,25 @@ const app = express();
 app.use(express.json());
 app.use(express.static(path.join(__dirname, "public")));
 
-// Load & prepare training data once at startup
-let { features, labels } = loadCSV("kc_house_data.csv", {
-  shuffle: true,
-  splitTest: 10,
-  dataColumns: ["lat", "long", "sqft_lot", "sqft_living"],
-  labelColumns: ["price"],
-});
+// Defer tensor creation until the backend is ready
+let featuresTensor = null;
+let labelsTensor = null;
 
-const featuresTensor = tf.tensor(features);
-const labelsTensor = tf.tensor(labels);
+async function initModel() {
+  if (featuresTensor) return;
+  await tf.setBackend("cpu");
+  await tf.ready();
+
+  const { features, labels } = loadCSV("kc_house_data.csv", {
+    shuffle: true,
+    splitTest: 10,
+    dataColumns: ["lat", "long", "sqft_lot", "sqft_living"],
+    labelColumns: ["price"],
+  });
+
+  featuresTensor = tf.tensor(features);
+  labelsTensor = tf.tensor(labels);
+}
 
 const K = 10;
 
@@ -53,7 +62,15 @@ function knn(features, labels, predictionPoint, k) {
   return { prediction, priceMin, priceMax };
 }
 
-app.post("/predict", (req, res) => {
+app.post("/predict", async (req, res) => {
+  try {
+    await initModel();
+  } catch (e) {
+    return res
+      .status(500)
+      .json({ error: "Failed to initialize model: " + e.message });
+  }
+
   const { lat, long, sqft_lot, sqft_living } = req.body;
 
   if (
@@ -84,7 +101,11 @@ app.post("/predict", (req, res) => {
   });
 });
 
-const PORT = 3000;
-app.listen(PORT, () => {
-  console.log(`Server berjalan di http://localhost:${PORT}`);
-});
+const PORT = process.env.PORT || 3000;
+if (require.main === module) {
+  app.listen(PORT, () => {
+    console.log(`Server berjalan di http://localhost:${PORT}`);
+  });
+}
+
+module.exports = app;
