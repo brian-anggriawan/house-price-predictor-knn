@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>House Price Prediction - KNN</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+      }
+
+      .card {
+        background: rgba(255, 255, 255, 0.05);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 20px;
+        padding: 40px;
+        width: 100%;
+        max-width: 680px;
+        box-shadow: 0 25px 50px rgba(0, 0, 0, 0.4);
+      }
+
+      .card-header {
+        text-align: center;
+        margin-bottom: 36px;
+      }
+
+      .card-header .icon {
+        font-size: 48px;
+        margin-bottom: 12px;
+      }
+
+      .card-header h1 {
+        color: #e2e8f0;
+        font-size: 24px;
+        font-weight: 700;
+        margin-bottom: 6px;
+      }
+
+      .card-header p {
+        color: #94a3b8;
+        font-size: 14px;
+      }
+
+      .form-group {
+        margin-bottom: 20px;
+      }
+
+      label {
+        display: block;
+        color: #cbd5e1;
+        font-size: 13px;
+        font-weight: 600;
+        margin-bottom: 8px;
+        letter-spacing: 0.5px;
+        text-transform: uppercase;
+      }
+
+      .input-wrapper {
+        position: relative;
+        display: flex;
+        align-items: center;
+      }
+
+      .input-icon {
+        position: absolute;
+        left: 14px;
+        color: #64748b;
+        font-size: 16px;
+        pointer-events: none;
+      }
+
+      input[type="number"] {
+        width: 100%;
+        padding: 12px 14px 12px 42px;
+        background: rgba(255, 255, 255, 0.07);
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        border-radius: 10px;
+        color: #e2e8f0;
+        font-size: 15px;
+        outline: none;
+        transition: border-color 0.2s, background 0.2s;
+        -moz-appearance: textfield;
+      }
+
+      input[type="number"]::-webkit-outer-spin-button,
+      input[type="number"]::-webkit-inner-spin-button {
+        -webkit-appearance: none;
+      }
+
+      input[type="number"]:focus {
+        border-color: #3b82f6;
+        background: rgba(59, 130, 246, 0.08);
+      }
+
+      input[type="number"]::placeholder {
+        color: #475569;
+      }
+
+      .hint {
+        color: #64748b;
+        font-size: 11px;
+        margin-top: 5px;
+      }
+
+      .grid-2 {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+      }
+
+      .btn-predict {
+        width: 100%;
+        padding: 14px;
+        background: linear-gradient(135deg, #3b82f6, #2563eb);
+        color: white;
+        border: none;
+        border-radius: 12px;
+        font-size: 16px;
+        font-weight: 700;
+        cursor: pointer;
+        margin-top: 8px;
+        transition: transform 0.15s, box-shadow 0.15s, opacity 0.15s;
+        letter-spacing: 0.5px;
+      }
+
+      .btn-predict:hover:not(:disabled) {
+        transform: translateY(-1px);
+        box-shadow: 0 8px 20px rgba(59, 130, 246, 0.4);
+      }
+
+      .btn-predict:active:not(:disabled) {
+        transform: translateY(0);
+      }
+
+      .btn-predict:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+      }
+
+      .result-box {
+        display: none;
+        margin-top: 28px;
+        background: rgba(16, 185, 129, 0.08);
+        border: 1px solid rgba(16, 185, 129, 0.3);
+        border-radius: 12px;
+        padding: 24px;
+        text-align: center;
+        animation: fadeIn 0.3s ease;
+      }
+
+      .result-box.error {
+        background: rgba(239, 68, 68, 0.08);
+        border-color: rgba(239, 68, 68, 0.3);
+      }
+
+      .result-label {
+        color: #94a3b8;
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        margin-bottom: 8px;
+        font-weight: 600;
+      }
+
+      .result-price {
+        color: #10b981;
+        font-size: 36px;
+        font-weight: 800;
+        letter-spacing: -1px;
+      }
+
+      .result-box.error .result-price {
+        color: #ef4444;
+        font-size: 16px;
+      }
+
+      .result-sub {
+        color: #64748b;
+        font-size: 12px;
+        margin-top: 6px;
+      }
+
+      .result-range {
+        color: #94a3b8;
+        font-size: 13px;
+        margin-top: 6px;
+      }
+
+      .result-range span {
+        color: #cbd5e1;
+        font-weight: 600;
+      }
+
+      .model-badges {
+        display: flex;
+        gap: 8px;
+        justify-content: center;
+        flex-wrap: wrap;
+        margin-top: 16px;
+        padding-top: 16px;
+        border-top: 1px solid rgba(255, 255, 255, 0.08);
+      }
+
+      .badge {
+        background: rgba(255, 255, 255, 0.06);
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        border-radius: 20px;
+        padding: 5px 14px;
+        font-size: 11px;
+        color: #94a3b8;
+        letter-spacing: 0.3px;
+      }
+
+      .badge strong {
+        color: #e2e8f0;
+      }
+
+      .loader {
+        display: none;
+        width: 20px;
+        height: 20px;
+        border: 2px solid rgba(255, 255, 255, 0.3);
+        border-top-color: white;
+        border-radius: 50%;
+        animation: spin 0.7s linear infinite;
+        margin: 0 auto;
+      }
+
+      @keyframes spin {
+        to { transform: rotate(360deg); }
+      }
+
+      @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(8px); }
+        to   { opacity: 1; transform: translateY(0); }
+      }
+
+      .divider {
+        height: 1px;
+        background: rgba(255, 255, 255, 0.08);
+        margin: 28px 0;
+      }
+
+      .example-box {
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 12px;
+        padding: 16px 18px;
+        margin-bottom: 24px;
+      }
+
+      .example-box-title {
+        color: #94a3b8;
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        font-weight: 600;
+        margin-bottom: 12px;
+      }
+
+      .example-list {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .example-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+      }
+
+      .example-desc {
+        color: #cbd5e1;
+        font-size: 13px;
+        flex: 1;
+      }
+
+      .example-vals {
+        color: #64748b;
+        font-size: 11px;
+        font-family: monospace;
+        white-space: nowrap;
+      }
+
+      .btn-fill {
+        background: rgba(59, 130, 246, 0.15);
+        border: 1px solid rgba(59, 130, 246, 0.3);
+        color: #93c5fd;
+        font-size: 11px;
+        padding: 4px 10px;
+        border-radius: 6px;
+        cursor: pointer;
+        transition: background 0.15s;
+        white-space: nowrap;
+      }
+
+      .btn-fill:hover {
+        background: rgba(59, 130, 246, 0.3);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <div class="card-header">
+        <div class="icon">🏠</div>
+        <h1>House Price Prediction</h1>
+        <p>Enter property details to get an estimated price</p>
+      </div>
+
+      <div class="example-box">
+        <div class="example-box-title">Example Parameters</div>
+        <div class="example-list">
+          <div class="example-item">
+            <div>
+              <div class="example-desc">Standard house ~$221,900</div>
+              <div class="example-vals">lat: 47.5112 | long: -122.257 | lot: 5650 | living: 1180</div>
+            </div>
+            <button type="button" class="btn-fill" onclick="fillExample(47.5112, -122.257, 5650, 1180)">Fill</button>
+          </div>
+          <div class="example-item">
+            <div>
+              <div class="example-desc">Large house ~$538,000</div>
+              <div class="example-vals">lat: 47.721 | long: -122.319 | lot: 7242 | living: 2570</div>
+            </div>
+            <button type="button" class="btn-fill" onclick="fillExample(47.721, -122.319, 7242, 2570)">Fill</button>
+          </div>
+          <div class="example-item">
+            <div>
+              <div class="example-desc">Small house ~$180,000</div>
+              <div class="example-vals">lat: 47.7379 | long: -122.233 | lot: 10000 | living: 770</div>
+            </div>
+            <button type="button" class="btn-fill" onclick="fillExample(47.7379, -122.233, 10000, 770)">Fill</button>
+          </div>
+        </div>
+      </div>
+
+      <form id="predictForm">
+        <div class="grid-2">
+          <div class="form-group">
+            <label>Latitude</label>
+            <div class="input-wrapper">
+              <span class="input-icon">📍</span>
+              <input
+                type="number"
+                id="lat"
+                step="any"
+                placeholder="47.5112"
+                required
+              />
+            </div>
+            <div class="hint">Latitude coordinate</div>
+          </div>
+
+          <div class="form-group">
+            <label>Longitude</label>
+            <div class="input-wrapper">
+              <span class="input-icon">🧭</span>
+              <input
+                type="number"
+                id="long"
+                step="any"
+                placeholder="-122.257"
+                required
+              />
+            </div>
+            <div class="hint">Longitude coordinate</div>
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <div class="form-group">
+            <label>Lot Size (sqft)</label>
+            <div class="input-wrapper">
+              <span class="input-icon">📐</span>
+              <input
+                type="number"
+                id="sqft_lot"
+                step="any"
+                placeholder="5650"
+                required
+              />
+            </div>
+            <div class="hint">Total lot area</div>
+          </div>
+
+          <div class="form-group">
+            <label>Living Area (sqft)</label>
+            <div class="input-wrapper">
+              <span class="input-icon">🏗️</span>
+              <input
+                type="number"
+                id="sqft_living"
+                step="any"
+                placeholder="1180"
+                required
+              />
+            </div>
+            <div class="hint">Interior living space</div>
+          </div>
+        </div>
+
+        <button type="submit" class="btn-predict" id="submitBtn">
+          <span id="btnText">Predict Price</span>
+          <div class="loader" id="loader"></div>
+        </button>
+      </form>
+
+      <div class="result-box" id="resultBox">
+        <div class="result-label">Estimated House Price</div>
+        <div class="result-price" id="resultPrice"></div>
+        <div class="result-range" id="resultRange"></div>
+        <div class="model-badges" id="modelBadges"></div>
+      </div>
+    </div>
+
+    <script>
+      const form = document.getElementById("predictForm");
+      const resultBox = document.getElementById("resultBox");
+      const submitBtn = document.getElementById("submitBtn");
+      const btnText = document.getElementById("btnText");
+      const loader = document.getElementById("loader");
+
+      function setLoading(loading) {
+        submitBtn.disabled = loading;
+        btnText.style.display = loading ? "none" : "inline";
+        loader.style.display = loading ? "block" : "none";
+      }
+
+      function formatUSD(value) {
+        return new Intl.NumberFormat("en-US", {
+          style: "currency",
+          currency: "USD",
+          maximumFractionDigits: 0,
+        }).format(value);
+      }
+
+      form.addEventListener("submit", async (e) => {
+        e.preventDefault();
+
+        const lat = parseFloat(document.getElementById("lat").value);
+        const long = parseFloat(document.getElementById("long").value);
+        const sqft_lot = parseFloat(document.getElementById("sqft_lot").value);
+        const sqft_living = parseFloat(document.getElementById("sqft_living").value);
+
+        setLoading(true);
+        resultBox.style.display = "none";
+        resultBox.classList.remove("error");
+
+        try {
+          const response = await fetch("/predict", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ lat, long, sqft_lot, sqft_living }),
+          });
+
+          const contentType = response.headers.get("content-type") || "";
+          if (!contentType.includes("application/json")) {
+            throw new Error("Server is not responding. Make sure the server is running with: node server.js");
+          }
+
+          const data = await response.json();
+
+          if (!response.ok) {
+            throw new Error(data.error || "An error occurred on the server");
+          }
+
+          document.getElementById("resultPrice").textContent = formatUSD(data.prediction);
+          document.getElementById("resultRange").innerHTML =
+            `Price range of ${data.k} nearest houses: <span>${formatUSD(data.priceMin)}</span> &ndash; <span>${formatUSD(data.priceMax)}</span>`;
+          document.getElementById("modelBadges").innerHTML =
+            `<div class="badge">Algorithm: <strong>${data.algorithm}</strong></div>` +
+            `<div class="badge">K = <strong>${data.k}</strong></div>` +
+            `<div class="badge">Features: <strong>${data.features}</strong></div>`;
+          resultBox.style.display = "block";
+        } catch (err) {
+          resultBox.classList.add("error");
+          document.getElementById("resultPrice").textContent =
+            err.message.includes("fetch") || err.message.includes("Failed")
+              ? "Cannot connect to server. Run: node server.js"
+              : err.message;
+          document.getElementById("resultRange").textContent = "";
+          document.getElementById("modelBadges").textContent = "";
+          resultBox.style.display = "block";
+        } finally {
+          setLoading(false);
+        }
+      });
+
+      function fillExample(lat, long, sqft_lot, sqft_living) {
+        document.getElementById("lat").value = lat;
+        document.getElementById("long").value = long;
+        document.getElementById("sqft_lot").value = sqft_lot;
+        document.getElementById("sqft_living").value = sqft_living;
+      }
+    </script>
+  </body>
+</html>

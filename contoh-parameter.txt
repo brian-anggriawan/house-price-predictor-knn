@@ -1,0 +1,57 @@
+======================================================
+  CONTOH PARAMETER INPUT - PREDIKSI HARGA RUMAH (KNN)
+======================================================
+
+Dataset: King County, Seattle, Washington, USA
+Kolom yang digunakan: lat, long, sqft_lot, sqft_living
+------------------------------------------------------
+
+CONTOH 1 — Rumah Standar
+  Prediksi harga sekitar: $221,900
+  Latitude      : 47.5112
+  Longitude     : -122.257
+  Luas Tanah    : 5650 sqft
+  Luas Bangunan : 1180 sqft
+  K             : 10
+
+------------------------------------------------------
+
+CONTOH 2 — Rumah Besar
+  Prediksi harga sekitar: $538,000
+  Latitude      : 47.7210
+  Longitude     : -122.319
+  Luas Tanah    : 7242 sqft
+  Luas Bangunan : 2570 sqft
+  K             : 10
+
+------------------------------------------------------
+
+CONTOH 3 — Rumah Kecil
+  Prediksi harga sekitar: $180,000
+  Latitude      : 47.7379
+  Longitude     : -122.233
+  Luas Tanah    : 10000 sqft
+  Luas Bangunan : 770 sqft
+  K             : 10
+
+------------------------------------------------------
+
+CONTOH 4 — Rumah Premium
+  Prediksi harga sekitar: $604,000
+  Latitude      : 47.5208
+  Longitude     : -122.393
+  Luas Tanah    : 5000 sqft
+  Luas Bangunan : 1960 sqft
+  K             : 10
+
+------------------------------------------------------
+
+CATATAN:
+- Latitude  : selalu sekitar 47.xxxx (area Seattle)
+- Longitude : selalu sekitar -122.xxx (area Seattle)
+- Luas Tanah (sqft_lot)    : luas total kavling/tanah
+- Luas Bangunan (sqft_living) : luas area yang dapat dihuni
+- K : jumlah tetangga terdekat (disarankan 5-20)
+- 1 sqft = 0.0929 m²
+
+======================================================
