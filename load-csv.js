@@ -1,13 +1,13 @@
-const fs = require('fs');
-const path = require('path');
-const _ = require('lodash');
-const shuffleSeed = require('shuffle-seed');
+const fs = require("fs");
+const path = require("path");
+const _ = require("lodash");
+const shuffleSeed = require("shuffle-seed");
 
 function extractColumns(data, columnNames) {
   const headers = _.first(data);
 
-  const indexes = _.map(columnNames, column => headers.indexOf(column));
-  const extracted = _.map(data, row => _.pullAt(row, indexes));
+  const indexes = _.map(columnNames, (column) => headers.indexOf(column));
+  const extracted = _.map(data, (row) => _.pullAt(row, indexes));
 
   return extracted;
 }
@@ -19,12 +19,14 @@ module.exports = function loadCSV(
     labelColumns = [],
     converters = {},
     shuffle = false,
-    splitTest = false
-  }
+    splitTest = false,
+  },
 ) {
-  let data = fs.readFileSync(path.join(__dirname, filename), { encoding: 'utf-8' });
-  data = _.map(data.split('\n'), d => d.split(','));
-  data = _.dropRightWhile(data, val => _.isEqual(val, ['']));
+  let data = fs.readFileSync(path.join(__dirname, filename), {
+    encoding: "utf-8",
+  });
+  data = _.map(data.split("\n"), (d) => d.split(","));
+  data = _.dropRightWhile(data, (val) => _.isEqual(val, [""]));
   const headers = _.first(data);
 
   data = _.map(data, (row, index) => {
@@ -37,7 +39,7 @@ module.exports = function loadCSV(
         return _.isNaN(converted) ? element : converted;
       }
 
-      const result = parseFloat(element.replace('"', ''));
+      const result = parseFloat(element.replace('"', ""));
       return _.isNaN(result) ? element : result;
     });
   });
@@ -49,8 +51,8 @@ module.exports = function loadCSV(
   labels.shift();
 
   if (shuffle) {
-    data = shuffleSeed.shuffle(data, 'phrase');
-    labels = shuffleSeed.shuffle(labels, 'phrase');
+    data = shuffleSeed.shuffle(data, "phrase");
+    labels = shuffleSeed.shuffle(labels, "phrase");
   }
 
   if (splitTest) {
@@ -62,7 +64,7 @@ module.exports = function loadCSV(
       features: data.slice(trainSize),
       labels: labels.slice(trainSize),
       testFeatures: data.slice(0, trainSize),
-      testLabels: labels.slice(0, trainSize)
+      testLabels: labels.slice(0, trainSize),
     };
   } else {
     return { features: data, labels };
