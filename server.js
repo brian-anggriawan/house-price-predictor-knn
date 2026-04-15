@@ -1,4 +1,5 @@
-const tf = require("@tensorflow/tfjs");
+const tf = require("@tensorflow/tfjs-core");
+require("@tensorflow/tfjs-backend-cpu");
 const express = require("express");
 const path = require("path");
 const loadCSV = require("./load-csv");

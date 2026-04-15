@@ -1,4 +1,5 @@
 const fs = require('fs');
+const path = require('path');
 const _ = require('lodash');
 const shuffleSeed = require('shuffle-seed');
 
@@ -21,7 +22,7 @@ module.exports = function loadCSV(
     splitTest = false
   }
 ) {
-  let data = fs.readFileSync(filename, { encoding: 'utf-8' });
+  let data = fs.readFileSync(path.join(__dirname, filename), { encoding: 'utf-8' });
   data = _.map(data.split('\n'), d => d.split(','));
   data = _.dropRightWhile(data, val => _.isEqual(val, ['']));
   const headers = _.first(data);
