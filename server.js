@@ -1,5 +1,3 @@
-const tf = require("@tensorflow/tfjs-core");
-require("@tensorflow/tfjs-backend-cpu");
 const express = require("express");
 const path = require("path");
 const loadCSV = require("./load-csv");
@@ -8,69 +6,56 @@ const app = express();
 app.use(express.json());
 app.use(express.static(path.join(__dirname, "public")));
 
-// Defer tensor creation until the backend is ready
-let featuresTensor = null;
-let labelsTensor = null;
-
-async function initModel() {
-  if (featuresTensor) return;
-  await tf.setBackend("cpu");
-  await tf.ready();
-
-  const { features, labels } = loadCSV("kc_house_data.csv", {
-    shuffle: true,
-    splitTest: 10,
-    dataColumns: ["lat", "long", "sqft_lot", "sqft_living"],
-    labelColumns: ["price"],
-  });
-
-  featuresTensor = tf.tensor(features);
-  labelsTensor = tf.tensor(labels);
-}
-
 const K = 10;
 
-function knn(features, labels, predictionPoint, k) {
-  const { mean, variance } = tf.moments(features, 0);
-  const scaledPredictionPoint = predictionPoint
-    .sub(mean)
-    .div(variance.pow(0.5));
+// Load and prepare training data once at startup
+const { features, labels } = loadCSV("kc_house_data.csv", {
+  shuffle: true,
+  splitTest: 10,
+  dataColumns: ["lat", "long", "sqft_lot", "sqft_living"],
+  labelColumns: ["price"],
+});
 
-  const sorted = features
-    .sub(mean)
-    .div(variance.pow(0.5))
-    .sub(scaledPredictionPoint)
-    .pow(2)
-    .sum(1)
-    .pow(0.5)
-    .expandDims(1)
-    .concat(labels, 1)
-    .unstack()
-    .sort((a, b) => a.arraySync()[0] - b.arraySync()[0])
-    .slice(0, k);
+// Compute per-column mean and std for standardization
+const numCols = features[0].length;
+const means = new Array(numCols).fill(0);
+const stds = new Array(numCols).fill(0);
 
-  const prices = sorted.map((pair) => pair.arraySync()[1]);
-  const prediction = prices.reduce((a, b) => a + b, 0) / k;
-  const priceMin = Math.min(...prices);
-  const priceMax = Math.max(...prices);
+for (const row of features) {
+  for (let i = 0; i < numCols; i++) means[i] += row[i];
+}
+for (let i = 0; i < numCols; i++) means[i] /= features.length;
 
-  mean.dispose();
-  variance.dispose();
-  scaledPredictionPoint.dispose();
-  sorted.forEach((t) => t.dispose());
+for (const row of features) {
+  for (let i = 0; i < numCols; i++) stds[i] += Math.pow(row[i] - means[i], 2);
+}
+for (let i = 0; i < numCols; i++)
+  stds[i] = Math.sqrt(stds[i] / features.length);
 
-  return { prediction, priceMin, priceMax };
+function knn(features, labels, predPoint, k) {
+  const distances = features.map((row, i) => {
+    const dist = Math.sqrt(
+      row.reduce((sum, val, j) => {
+        const normVal = (val - means[j]) / stds[j];
+        const normPred = (predPoint[j] - means[j]) / stds[j];
+        return sum + Math.pow(normVal - normPred, 2);
+      }, 0),
+    );
+    return { dist, price: labels[i][0] };
+  });
+
+  distances.sort((a, b) => a.dist - b.dist);
+  const nearest = distances.slice(0, k);
+  const prices = nearest.map((d) => d.price);
+
+  return {
+    prediction: prices.reduce((a, b) => a + b, 0) / k,
+    priceMin: Math.min(...prices),
+    priceMax: Math.max(...prices),
+  };
 }
 
-app.post("/predict", async (req, res) => {
-  try {
-    await initModel();
-  } catch (e) {
-    return res
-      .status(500)
-      .json({ error: "Failed to initialize model: " + e.message });
-  }
-
+app.post("/predict", (req, res) => {
   const { lat, long, sqft_lot, sqft_living } = req.body;
 
   if (
@@ -82,14 +67,12 @@ app.post("/predict", async (req, res) => {
     return res.status(400).json({ error: "All fields are required." });
   }
 
-  const predictionPoint = tf.tensor([lat, long, sqft_lot, sqft_living]);
   const { prediction, priceMin, priceMax } = knn(
-    featuresTensor,
-    labelsTensor,
-    predictionPoint,
+    features,
+    labels,
+    [lat, long, sqft_lot, sqft_living],
     K,
   );
-  predictionPoint.dispose();
 
   res.json({
     prediction: Math.round(prediction),
